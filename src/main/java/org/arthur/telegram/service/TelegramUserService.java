@@ -33,18 +33,21 @@ public class TelegramUserService {
     private final Store store;
 
     public TelegramUser getTelegramUser(Update update) {
-        User telegramUser = update.hasCallbackQuery() ? update.getCallbackQuery().getMessage().getFrom() : update.getMessage().getFrom();
+        Long telegramUserId = update.hasCallbackQuery() ? update.getCallbackQuery().getMessage().getChatId() : update.getMessage().getFrom().getId();
         Long chatId = update.hasCallbackQuery() ? update.getCallbackQuery().getMessage().getChatId() : update.getMessage().getChatId();
 
-        TelegramUser user = store.getUserStore().get(telegramUser.getId());
+        TelegramUser user = store.getUserStore().get(telegramUserId);
         if (user == null) {
             try {
-                if (telegramUserCrudService == null || (user = telegramUserCrudService.findByTelegramIdTelegramUser(telegramUser.getId())) == null) {
-                    user = new TelegramUser(telegramUser.getId());
-                    user.setLocale(telegramUser.getLanguageCode());
+                if (telegramUserCrudService == null || (user = telegramUserCrudService.findByTelegramIdTelegramUser(telegramUserId)) == null) {
+                    user = new TelegramUser(telegramUserId);
                     user.setChatId(chatId);
-                    user.setFirstName(telegramUser.getFirstName());
-                    user.setLastName(telegramUser.getLastName());
+                    if(!update.hasCallbackQuery()) {
+                        User from = update.getMessage().getFrom();
+                        user.setLocale(from.getLanguageCode());
+                        user.setFirstName(from.getFirstName());
+                        user.setLastName(from.getLastName());
+                    }
                     user = telegramUserCrudService != null ? telegramUserCrudService.saveTelegramUser(user) : user;
 
                     String referralLink;
@@ -55,7 +58,7 @@ public class TelegramUserService {
             } catch (NoSuchBeanDefinitionException e) {
                 log.info("Ok, you not implemented optional service, {}", e.getResolvableType());
             }
-            store.getUserStore().put(telegramUser.getId(), user);
+            store.getUserStore().put(telegramUserId, user);
         }
         return user;
     }
@@ -71,7 +74,23 @@ public class TelegramUserService {
         return null;
     }
 
+    public TelegramUser getTelegramUserById(long id) {
+        TelegramUser telegramUser = store.getUserStore().get(id);
+        if(telegramUser == null) {
+            telegramUser = telegramUserCrudService.findByTelegramIdTelegramUser(id);
+            store.getUserStore().put(id, telegramUser);
+        }
+        return telegramUser;
+    }
+
     public TelegramUser getCurrentTelegramUser() {
         return UserScope.getUser();
+    }
+
+    public void setProgress(boolean b) {
+        UserScope.getUser().setInProgress(b);
+    }
+    public void setState(String state) {
+        UserScope.getUser().setCurrentState(state);
     }
 }

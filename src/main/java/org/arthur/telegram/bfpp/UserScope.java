@@ -2,12 +2,15 @@ package org.arthur.telegram.bfpp;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.Scope;
 import org.arthur.telegram.user.TelegramUser;
+import org.springframework.lang.NonNull;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,20 +23,29 @@ public class UserScope implements Scope {
 
     private final Object lock = new Object();
     private final ConfigurableListableBeanFactory beanFactory;
-    private final Cache<String, Map<String, Object>> conversations;
+    private final LoadingCache<String, ConcurrentHashMap<String, Object>> conversations;
 
     public UserScope(ConfigurableListableBeanFactory beanFactory) {
         this.beanFactory = beanFactory;
-        // По истечению 1 часа пользовательские бины удаляются
-        conversations = CacheBuilder.newBuilder()
+        conversations = CacheBuilder
+                .newBuilder()
                 .expireAfterAccess(1, TimeUnit.HOURS)
                 .removalListener(notification -> {
                     if (notification.wasEvicted()) {
+                        log.debug("Evict session for key {}", notification.getKey());
                         Map<String, Object> userScope = (Map<String, Object>) notification.getValue();
-                        userScope.values().forEach(this::removeBean);
+                        if (userScope != null) {
+                            userScope.values().forEach(this::removeBean);
+                        }
                     }
                 })
-                .build();
+                .build(new CacheLoader<String, ConcurrentHashMap<String, Object>>() {
+                    @Override
+                    public ConcurrentHashMap<String, Object> load(@NonNull String key) {
+                        log.debug("Create session for key = {}", key);
+                        return new ConcurrentHashMap<>();
+                    }
+                });
     }
 
     public static TelegramUser getUser() {
@@ -49,7 +61,7 @@ public class UserScope implements Scope {
         final String userId = getConversationId();
         if (userId != null) {
             final String userName = String.valueOf(getUser().getTelegramId());
-            Map<String, Object> beans = conversations.getIfPresent(userId);
+            ConcurrentHashMap<String, Object> beans = conversations.getIfPresent(userId);
             if (beans == null) {
                 synchronized (lock) {
                     beans = conversations.getIfPresent(userId);
