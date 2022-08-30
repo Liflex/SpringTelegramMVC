@@ -5,7 +5,9 @@ import lombok.*;
 import javax.persistence.*;
 import java.util.Objects;
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @RequiredArgsConstructor
 @NoArgsConstructor
 @Entity
@@ -13,9 +15,11 @@ import java.util.Objects;
 public class TelegramUser {
     @Id
     @GeneratedValue(strategy = GenerationType.TABLE)
+    @EqualsAndHashCode.Include
     protected long id;
     protected long chatId;
     @NonNull
+    @EqualsAndHashCode.Include
     protected long telegramId;
     protected int page;
     protected String locale;
@@ -44,18 +48,5 @@ public class TelegramUser {
     public TelegramUser(long chatId, @NonNull int telegramId) {
         this.chatId = chatId;
         this.telegramId = telegramId;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TelegramUser that = (TelegramUser) o;
-        return chatId == that.chatId && telegramId == that.telegramId;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(chatId, telegramId);
     }
 }

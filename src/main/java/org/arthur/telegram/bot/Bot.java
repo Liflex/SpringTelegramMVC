@@ -8,6 +8,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -72,6 +73,8 @@ public abstract class Bot extends TelegramLongPollingBot {
                 execute((SendDocument) method);
             } else if (method.getClass().equals(AnswerCallbackQuery.class)) {
                 execute((AnswerCallbackQuery) method);
+            } else if (method.getClass().equals(PinChatMessage.class)) {
+                execute((PinChatMessage) method);
             }
         }
     }
